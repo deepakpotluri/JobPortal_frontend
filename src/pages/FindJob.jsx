@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SearchComponent from '../components/SearchComponent';
 import { useNavigate } from 'react-router-dom';
+import { MapPin } from 'lucide-react';
 import axios from 'axios';
 
 const jobTypes = [
@@ -10,6 +11,38 @@ const jobTypes = [
   { id: 4, name: 'Remote', value: 'Remote' },
   { id: 5, name: 'Internship', value: 'Internship' }
 ];
+
+const LocationBadges = ({ locations }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayLimit = 2;
+  
+  if (!locations || locations.length === 0) return null;
+  
+  const displayLocations = isExpanded ? locations : locations.slice(0, displayLimit);
+  const remainingCount = locations.length - displayLimit;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <MapPin className="h-4 w-4 text-gray-500" />
+      {displayLocations.map((location, index) => (
+        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
+          {location}
+        </span>
+      ))}
+      {!isExpanded && remainingCount > 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(true);
+          }}
+          className="text-xs text-blue-600 hover:text-blue-800"
+        >
+          +{remainingCount} more
+        </button>
+      )}
+    </div>
+  );
+};
 
 const FindJob = () => {
   const [jobs, setJobs] = useState([]);
@@ -21,11 +54,8 @@ const FindJob = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const API_BASE_URL =`${import.meta.env.VITE_BACKEND_URI}/api`;
-  
- 
 
   const fetchJobs = async () => {
-
     try {
       setIsLoading(true);
       const response = await axios.get(`${API_BASE_URL}/jobs`);
@@ -83,7 +113,9 @@ const FindJob = () => {
       if (currentLocations.length > 0) {
         filtered = filtered.filter(job =>
           currentLocations.some(location =>
-            job.jobLocation?.toLowerCase().includes(location.toLowerCase())
+            job.jobLocations && job.jobLocations.some(jobLocation =>
+              jobLocation.toLowerCase().includes(location.toLowerCase())
+            )
           )
         );
       }
@@ -198,19 +230,30 @@ const FindJob = () => {
                 className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => navigate(`/job/${job._id}`)}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-4">
-                    {job.companyLogo && (
-                      <img 
-                        src={job.companyLogo} 
-                        alt={job.companyName} 
-                        className="w-12 h-12 object-contain"
-                      />
-                    )}
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-800">{job.jobTitle}</h3>
-                      <p className="text-gray-600 mt-1">{job.companyName}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-grow">
+                    <div className="flex items-start gap-4">
+                      {job.companyLogo && (
+                        <img 
+                          src={job.companyLogo} 
+                          alt={job.companyName} 
+                          className="w-12 h-12 object-contain"
+                        />
+                      )}
+                      <div className="flex-grow">
+                        <h3 className="text-lg font-semibold text-gray-800 truncate">
+                          {job.jobTitle}
+                        </h3>
+                        <p className="text-gray-600 truncate">
+                          {job.companyName}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 space-y-3">
+                      <LocationBadges locations={job.jobLocations} />
+                      
+                      <div className="flex flex-wrap gap-2">
                         {job.employmentType && (
                           Array.isArray(job.employmentType) ? (
                             job.employmentType.map((type, index) => (
@@ -226,12 +269,7 @@ const FindJob = () => {
                             ))
                           )
                         )}
-                        {job.jobLocation && (
-                          <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
-                            {job.jobLocation}
-                          </span>
-                        )}
-                        {job.experience.min !== undefined && job.experience.max !== undefined && (
+                        {job.experience && job.experience.min !== undefined && job.experience.max !== undefined && (
                           <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
                             {job.experience.min} - {job.experience.max} years
                           </span>
@@ -239,16 +277,19 @@ const FindJob = () => {
                       </div>
                     </div>
                   </div>
-                  {job.salary && job.salary.min && job.salary.max && (
-                     <div className="text-gray-600">
-                     <p className="text-sm">Posted: {new Date(job.createdAt).toLocaleDateString()}</p>
-                     <p className="text-sm font-medium mt-1">
-                       {job.salary.min}LPA - {job.salary.max}LPA
-                     </p>
-                   </div>
-                  )}
+                  
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">
+                      Posted: {new Date(job.createdAt).toLocaleDateString()}
+                    </p>
+                    {job.salary && job.salary.min && job.salary.max && (
+                      <p className="text-sm font-medium mt-1 text-gray-700">
+                        ₹{job.salary.min}L - ₹{job.salary.max}L
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-gray-600 mt-4">{job.description.slice(0, 150)}...</p>
+                <p className="text-gray-600 mt-4">{job.description?.slice(0, 150)}...</p>
               </div>
             ))
           )}

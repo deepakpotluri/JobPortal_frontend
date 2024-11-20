@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { FiMapPin, FiSearch } from 'react-icons/fi';
 
-const majorIndianCities = [
+export const majorIndianCities = [
   'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata',
   'Pune', 'Ahmedabad', 'Jaipur', 'Surat', 'Lucknow', 'Kanpur',
   'Nagpur', 'Indore', 'Thane', 'Bhopal', 'Visakhapatnam',
@@ -10,6 +10,7 @@ const majorIndianCities = [
   'Ludhiana', 'Agra', 'Nashik', 'Faridabad', 'Meerut',
   'Rajkot', 'Kalyan-Dombivli', 'Vasai-Virar', 'Varanasi'
 ];
+
 
 const SearchComponent = ({ onKeywordSearch, isJobPage = false }) => {
   const [keywords, setKeywords] = useState([]);

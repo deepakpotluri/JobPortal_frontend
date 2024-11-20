@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { MapPin } from 'lucide-react';
 import axios from 'axios';
 
 const JobDetail = () => {
@@ -9,7 +10,7 @@ const JobDetail = () => {
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  const API_BASE_URL =`${import.meta.env.VITE_BACKEND_URI}/api`;
+  const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URI}/api`;
   
   const formRef = useRef(null);
 
@@ -38,39 +39,18 @@ const JobDetail = () => {
 
   const formatUrl = (url) => {
     if (!url) return '';
-    
-    // Remove any trailing slashes
     url = url.trim().replace(/\/+$/, '');
-    
-    // Check if the URL already has a protocol
-    if (url.match(/^https?:\/\//)) {
-      return url;
-    }
-    
-    // Check if URL starts with www.
-    if (url.startsWith('www.')) {
-      return `https://${url}`;
-    }
-    
-    // Add https:// if no protocol or www.
+    if (url.match(/^https?:\/\//)) return url;
+    if (url.startsWith('www.')) return `https://${url}`;
     return `https://${url}`;
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
-    if (name === 'linkedinUrl') {
-      // Store the raw value in form state
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -84,7 +64,6 @@ const JobDetail = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!formData.linkedinUrl || !formData.resume) {
       setSubmitStatus({
         loading: false,
@@ -100,7 +79,6 @@ const JobDetail = () => {
       const formDataToSubmit = new FormData();
       formDataToSubmit.append('jobId', id);
       formDataToSubmit.append('email', formData.email);
-      // Format the LinkedIn URL before submission
       formDataToSubmit.append('linkedinUrl', formatUrl(formData.linkedinUrl));
       formDataToSubmit.append('resume', formData.resume);
   
@@ -126,8 +104,6 @@ const JobDetail = () => {
           resume: null
         });
         setShowForm(false);
-  
-        // Alert on successful application
         window.alert("Successfully applied for the job!");
       }
     } catch (err) {
@@ -207,7 +183,22 @@ const JobDetail = () => {
             <div>
               <h1 className="text-3xl font-bold text-white">{job.jobTitle}</h1>
               <p className="text-indigo-200 mt-2">{job.companyName}</p>
-              <p className="text-indigo-200 mt-2">{job.jobLocation}</p>
+              {/* Display job locations with MapPin icon */}
+              {job.jobLocations && job.jobLocations.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <MapPin className="h-4 w-4 text-indigo-200" />
+                  <div className="flex flex-wrap gap-2">
+                    {job.jobLocations.map((location, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-indigo-700 text-indigo-100 rounded-full text-xs"
+                      >
+                        {location}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { X } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import { majorIndianCities } from '../components/SearchComponent';
 
 const PostJob = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, authLoading } = useAuth();
+  const locationInputRef = useRef(null);
+  const suggestionsRef = useRef(null);
   
   const initialFormState = {
     jobTitle: '',
@@ -20,7 +25,7 @@ const PostJob = () => {
       max: ''
     },
     companyName: '',
-    jobLocation: '',
+    jobLocations: [], // Changed from jobLocation to jobLocations array
     companyLogo: '',
     companyUrl: '',
     status: 'active'
@@ -30,6 +35,9 @@ const PostJob = () => {
   const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredCities, setFilteredCities] = useState(majorIndianCities);
 
   useEffect(() => {
     if (authLoading) return;
@@ -48,28 +56,46 @@ const PostJob = () => {
 
     const token = localStorage.getItem('token');
     if (token) {
-      axios.defaults.baseURL =`${import.meta.env.VITE_BACKEND_URI}`;
+      axios.defaults.baseURL = `${import.meta.env.VITE_BACKEND_URI}`;
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
   }, [isAuthenticated, user, authLoading, navigate]);
 
+  // Location filtering effect
+  useEffect(() => {
+    if (currentLocation === '') {
+      setFilteredCities(majorIndianCities);
+    } else {
+      const filtered = majorIndianCities.filter(city =>
+        city.toLowerCase().includes(currentLocation.toLowerCase())
+      );
+      setFilteredCities(filtered);
+    }
+  }, [currentLocation]);
+
+  // Click outside effect for location suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target) &&
+        !locationInputRef.current?.contains(event.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const formatUrl = (url) => {
     if (!url) return '';
-    
-    // Remove any trailing slashes
     url = url.trim().replace(/\/+$/, '');
-    
-    // Check if the URL already has a protocol
-    if (url.match(/^https?:\/\//)) {
-      return url;
-    }
-    
-    // Check if URL starts with www.
-    if (url.startsWith('www.')) {
-      return `https://${url}`;
-    }
-    
-    // Add https:// if no protocol or www.
+    if (url.match(/^https?:\/\//)) return url;
+    if (url.startsWith('www.')) return `https://${url}`;
     return `https://${url}`;
   };
 
@@ -85,7 +111,6 @@ const PostJob = () => {
           : prev[arrayField].filter(item => item !== value)
       }));
     } else if (name === 'companyUrl') {
-      // For the URL input, store the raw value in the form state
       setFormState(prev => ({
         ...prev,
         [name]: value
@@ -105,6 +130,31 @@ const PostJob = () => {
         [name]: value
       }));
     }
+  };
+
+  const handleLocationKeyDown = (e) => {
+    if (e.key === 'Enter' && currentLocation.trim() !== '') {
+      e.preventDefault();
+      addLocation(currentLocation.trim());
+    }
+  };
+
+  const addLocation = (location) => {
+    if (!formState.jobLocations.includes(location)) {
+      setFormState(prev => ({
+        ...prev,
+        jobLocations: [...prev.jobLocations, location]
+      }));
+    }
+    setCurrentLocation('');
+    setShowSuggestions(false);
+  };
+
+  const removeLocation = (locationToRemove) => {
+    setFormState(prev => ({
+      ...prev,
+      jobLocations: prev.jobLocations.filter(location => location !== locationToRemove)
+    }));
   };
 
   const validateForm = () => {
@@ -143,6 +193,10 @@ const PostJob = () => {
   
     if (formState.workMode.length === 0) {
       throw new Error('Please select at least one work mode');
+    }
+
+    if (formState.jobLocations.length === 0) {
+      throw new Error('Please select at least one job location');
     }
   
     return {
@@ -185,7 +239,7 @@ const PostJob = () => {
         maxPrice: maxSalary.toString(),
         description: formState.description,
         companyName: formState.companyName,
-        jobLocation: formState.jobLocation,
+        jobLocations: formState.jobLocations,
         companyLogo: formState.companyLogo || null,
         companyUrl: formState.companyUrl ? formatUrl(formState.companyUrl) : null,
         rolesAndResponsibilities: formState.rolesAndResponsibilities,
@@ -215,7 +269,6 @@ const PostJob = () => {
       setLoading(false);
     }
   };
-
   return (
     <div className="max-w-4xl mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">Post a New Job</h1>
@@ -237,7 +290,7 @@ const PostJob = () => {
           <p className="mb-3"><strong>Roles and Responsibilities:</strong> {formState.rolesAndResponsibilities}</p>
           <p className="mb-3"><strong>Experience Range:</strong> {formState.experience.min} - {formState.experience.max} years</p>
           <p className="mb-3"><strong>Company Name:</strong> {formState.companyName}</p>
-          <p className="mb-3"><strong>Work Location:</strong> {formState.jobLocation}</p>
+          <p className="mb-3"><strong>Work Locations:</strong> {formState.jobLocations.join(', ')}</p>
           <p className="mb-3"><strong>Company Logo URL:</strong> {formState.companyLogo || 'N/A'}</p>
           <p className="mb-3"><strong>Company URL:</strong> {formState.companyUrl || 'N/A'}</p>
 
@@ -266,6 +319,7 @@ const PostJob = () => {
           </div>
         </div>
       ) : (
+
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-md">
           <div>
             <label className="block font-bold mb-1">Job Title</label>
@@ -418,15 +472,61 @@ const PostJob = () => {
           </div>
 
           <div>
-            <label className="block font-bold mb-1">Job Location</label>
-            <input
-              type="text"
-              name="jobLocation"
-              value={formState.jobLocation}
-              onChange={handleChange}
-              className="input w-full px-4 py-2 bg-white border border-gray-300 rounded shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-            />
+            <label className="block font-bold mb-1">Job Locations</label>
+            <div className="relative">
+              <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">
+                <div>
+                  <MapPin className="text-gray-500 text-xl" />
+                </div>
+                {formState.jobLocations.map((location, index) => (
+                  <span
+                    key={`location-${location}-${index}`}
+                    className="bg-green-100 text-green-800 px-2 py-2 rounded flex items-center text-sm"
+                  >
+                    {location}
+                    <X 
+                      className="ml-1 cursor-pointer" 
+                      size={14} 
+                      onClick={() => removeLocation(location)}
+                    />
+                  </span>
+                ))}
+                <input
+                  ref={locationInputRef}
+                  type="text"
+                  placeholder={formState.jobLocations.length === 0 ? 'Select or type locations' : ''}
+                  className="flex-grow outline-none min-w-[200px]"
+                  value={currentLocation}
+                  onChange={(e) => {
+                    setCurrentLocation(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onKeyDown={handleLocationKeyDown}
+                  onFocus={() => setShowSuggestions(true)}
+                />
+              </div>
+              
+              {showSuggestions && (
+                <ul 
+                  ref={suggestionsRef} 
+                  className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {filteredCities.map((city, index) => (
+                    <li
+                      key={`city-${city}-${index}`}
+                      className="p-2 cursor-pointer hover:bg-gray-100"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        addLocation(city);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      {city}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
           <div>
             <label className="block font-bold mb-1">Company Logo URL (optional)</label>
