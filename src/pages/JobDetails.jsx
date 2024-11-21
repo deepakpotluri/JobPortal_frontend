@@ -83,7 +83,7 @@ const JobDetail = () => {
       formDataToSubmit.append('resume', formData.resume);
   
       const response = await axios.post(
-        `${API_BASE_URL}/applications`,
+        `${API_BASE_URL}/applications/submit`,
         formDataToSubmit,
         {
           headers: {

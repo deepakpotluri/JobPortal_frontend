@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URI + '/api';
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -25,7 +26,7 @@ export const AuthProvider = ({ children }) => {
             loading: false,
           });
         } catch (error) {
-          console.error("Failed to parse stored user:", error);
+          console.error('Failed to parse stored user:', error);
           localStorage.clear();
           setAuthState({ user: null, isAuthenticated: false, loading: false });
         }
@@ -39,7 +40,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
@@ -47,18 +48,21 @@ export const AuthProvider = ({ children }) => {
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userData', JSON.stringify(data.user));
-        
+
         setAuthState({
           user: data.user,
           isAuthenticated: true,
           loading: false,
         });
+
         return { success: true, user: data.user };
+      } else {
+        console.error('Login failed:', data.message);
+        return { success: false, error: data.message };
       }
-      return { success: false, error: data.error };
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, error: 'Login failed' };

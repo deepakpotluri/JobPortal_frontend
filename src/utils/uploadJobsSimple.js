@@ -18,7 +18,7 @@ async function uploadJobs() {
     console.log('Uploading jobs to server...');
     
     // Upload to server using fetch
-    const response = await fetch('http://localhost:5000/api/save-jobs', {
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URI}/api/save-jobs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -27,7 +27,7 @@ const JobApplications = () => {
       }
 
       const response = await axios.get(
-        `${API_BASE_URL}/jobs/${jobId}/applications`,
+        `${API_BASE_URL}/applications/job/${jobId}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -46,13 +46,16 @@ const JobApplications = () => {
       const token = localStorage.getItem('token');
       const filename = resumePath.split('\\').pop();
       const response = await axios.get(
-        `${API_BASE_URL}/applications/resume/${filename}`,
+        `${API_BASE_URL}/applications/resume/download/${filename}`, // Ensure this matches the backend route
         {
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/octet-stream' // This can help with download
+          },
           responseType: 'blob'
         }
       );
-
+  
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -61,10 +64,10 @@ const JobApplications = () => {
       link.click();
       link.remove();
     } catch (error) {
+      console.error('Download error:', error);
       setError('Failed to download resume');
     }
   };
-
   const handleViewResume = (resumePath) => {
     const filename = resumePath.split('\\').pop();
     // Use the new view endpoint instead of the download endpoint
@@ -76,9 +79,13 @@ const JobApplications = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.patch(
-        `${API_BASE_URL}/applications/${applicationId}/status`,
+        `${API_BASE_URL}/applications/${applicationId}/status`, // Corrected route
         { status },
-        { headers: { 'Authorization': `Bearer ${token}` } }
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
       
       setApplications(apps => 
@@ -87,10 +94,11 @@ const JobApplications = () => {
         )
       );
     } catch (error) {
+      console.error('Status update error:', error);
       setError('Failed to update status');
     }
   };
-
+  
   const getStatusColor = (status) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
